@@ -3,7 +3,8 @@ from time import time
 
 
 class GeneralThread(Thread):
-    def __init__(self, name: str, mainThread: any, daemon: bool = True, duration: float = -1) -> None:
+    def __init__(self, name: str, mainThread: any = None, fun=None, daemon: bool = True,
+                 duration: float = -1, args=(), kwargs=None) -> None:
         super().__init__()
         self.main: any = mainThread
         self.lock: Lock = Lock()
@@ -17,6 +18,9 @@ class GeneralThread(Thread):
             self.end: float = self.enter + duration
         self.name: str = name
         self.daemon: bool = daemon  ## All is going to collapse when the main thread exit
+        self.function = fun
+        self.args = args
+        self.kwargs = kwargs if kwargs else {}
 
     def updateNextRun(self, wait: float) -> None:
         nextRun: float = time() + wait
@@ -38,3 +42,7 @@ class GeneralThread(Thread):
         self.running = True
         with self.lock:
             self.condition.notify()
+
+    def run(self) -> None:
+        if self.function:
+            self.function(*self.args, **self.kwargs)
