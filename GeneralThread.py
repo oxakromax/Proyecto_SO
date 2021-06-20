@@ -25,16 +25,16 @@ class GeneralThread(Thread):
         else:
             self.nextRun = nextRun
 
-    def wait(self):
+    def wait(self) -> None:
         self.running = False
         with self.lock:
             self.condition.wait()
 
-    def waitTime(self, time: float):
+    def waitTime(self, time: float) -> None:
         self.updateNextRun(time)
         self.wait()
 
-    def release(self):
+    def release(self) -> None:
         self.running = True
         with self.lock:
             self.condition.notify()
