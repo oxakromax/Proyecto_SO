@@ -7,6 +7,6 @@ def hi(s):
     print(f'Hello {s}')
 
 
-GeneralThread("HelloWorld", fun=hi, args=("Pete",)).start()
+GeneralThread("HelloWorld", target=hi, args=("Pete",)).start()
 # Thread()
 sleep(100)
