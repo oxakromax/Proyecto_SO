@@ -12,10 +12,7 @@ class GeneralThread(Thread):
         self.nextRun: float = 0
         self.running: bool = True
         self.enter: float = time()
-        if duration == -1:
-            self.end: float = self.enter + 999999999999999
-        else:
-            self.end: float = self.enter + duration
+        self.end: float = self.enter + duration if duration else self.enter + 99999999999999999999
         self.name: str = name
         self.daemon: bool = daemon  ## All is going to collapse when the main thread exit
         self.function = target
