@@ -3,9 +3,9 @@ from time import time
 
 
 class GeneralThread(Thread):
-    def __init__(self, name: str, mainThread, daemon: bool = True, duration: float = -1) -> None:
+    def __init__(self, name: str, mainThread: any, daemon: bool = True, duration: float = -1) -> None:
         super().__init__()
-        self.main = mainThread
+        self.main: any = mainThread
         self.lock: Lock = Lock()
         self.condition: Condition = Condition(self.lock)
         self.nextRun: float = 0
