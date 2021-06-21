@@ -50,7 +50,7 @@ class Map(GeneralThread):
             self.ubersDone = 0
             self.clientsDone = 0
             self.runClients()
-            self.wait()
+            # self.wait()
             self.runUbers()
             self.wait()
             info(self.time)
@@ -72,6 +72,7 @@ class client(GeneralThread):
         self.id: int = id
         self.picked: bool = False
         self.done: bool = False
+        self.checked: bool = False
 
     def updatePicked(self, status: bool):
         self.picked = status
@@ -97,22 +98,36 @@ class client(GeneralThread):
                 if uber.setPassenger(self):
                     self.main.clients.remove(self)
                     self.main.historyclients.append(self)
-                    info(f'I picked the uber {uber.name}')
+                    info(f'I picked the uber {uber.name} and i have time: {self.time}')
                     return True
         return False
 
+    # async def trytoPick(self):
+    #     condition = asyncio.Condition()
+    #     async with condition:
+    #         await condition.wait_for(lambda: self.time <= self.main.time)
+    #         self.pickUber()
+    #         # await condition.wait_for(lambda: self.pickUber())
+
     def run(self) -> None:
-        while self.running.isSet() and self.main.time < self.main.maxTime:
-            self.wait()
-            self.flag.wait()
-            if self.time <= self.main.time:
-                if self.pickUber():
-                    if len(self.main.clients) == self.main.clientsDone:
-                        self.main.release()  # If something happens, it checks anyway
-                    return  # Colapses the thread because it never going to be used again
-            self.main.clientsDone += 1
-            if len(self.main.clients) == self.main.clientsDone:
-                self.main.release()
+        with self.lock:
+            self.condition.wait_for(lambda: self.time <= self.main.time)
+        if not self.pickUber():
+            with self.lock:
+                self.condition.wait_for(lambda: self.pickUber())
+
+    # def run(self) -> None:
+    #     while self.running.isSet() and self.main.time < self.main.maxTime:
+    #         self.wait()
+    #         self.flag.wait()
+    #         if self.time <= self.main.time:
+    #             if self.pickUber():
+    #                 if len(self.main.clients) == self.main.clientsDone:
+    #                     self.main.release()  # If something happens, it checks anyway
+    #                 return  # Colapses the thread because it never going to be used again
+    #         self.main.clientsDone += 1
+    #         if len(self.main.clients) == self.main.clientsDone:
+    #             self.main.release()
 
 
 class Uber(GeneralThread):
@@ -196,7 +211,6 @@ class Uber(GeneralThread):
             return False
         self.passenger = passenger
         self.clients.append(passenger)
-        self.definePathbyPassengerStatus(self.passenger)
         return True
 
     def move(self, deltaX: int, deltaY: int) -> None:
@@ -206,6 +220,9 @@ class Uber(GeneralThread):
 
     def activity(self, c=0):
         if self.passenger:
+            if not self.passenger.checked:
+                self.passenger.checked = True
+                self.definePathbyPassengerStatus(self.passenger)
             if self.currentIndex == len(self.pathToObjective):
                 if self.passenger.getState() == 0:
                     self.passenger.picked = True
