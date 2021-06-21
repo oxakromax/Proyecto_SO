@@ -1,12 +1,16 @@
-from time import sleep
+from logging import basicConfig, DEBUG
+from random import randint
 
-from GeneralThread import GeneralThread
+from World import Map, Uber, client
 
-
-def hi(s):
-    sleep(1)
-    print(f'Hello {s}')
-
-
-GeneralThread("HelloWorld", fun=hi, arguments=("Pete",), demon=False).start()
-s: str = ...
+basicConfig(level=DEBUG, format='%(asctime)s - %(threadName)s - %(message)s',
+            datefmt='%d-%b-%y %H:%M:%S')
+world = Map()
+for x in range(100):  # Agrega 100 ubers
+    world.ubers.append(Uber(x, world, randint(0, 1000), randint(0, 1000)))
+for x in range(2000):  ## Agrega 2000 clientes
+    world.clients.append(
+        client(x, world, randint(0, 1000), randint(0, 1000), randint(0, 1000), randint(0, 1000), randint(0, 12000)))
+world.start()
+# sleep(1)
+# World.SLEEP_INTERVAL = 1
