@@ -1,8 +1,12 @@
+from time import sleep
+
 from GeneralThread import GeneralThread
 
 
 def hi(s):
+    sleep(1)
     print(f'Hello {s}')
 
 
-GeneralThread("HelloWorld", target=hi, args=("Pete",), daemon=False).start()
+GeneralThread("HelloWorld", fun=hi, arguments=("Pete",), demon=False).start()
+s: str = ...

@@ -1,23 +1,19 @@
 from threading import Condition, Lock, Thread
 from time import time
+from typing import Optional, Iterable, Mapping, Any
 
 
 class GeneralThread(Thread):
-    def __init__(self, name: str, mainThread: any = None, target=None, daemon: bool = True,
-                 duration: float = -1, args=(), kwargs=None) -> None:
-        super().__init__()
+    def __init__(self, nameThread: Optional[str] = ..., mainThread: any = None, fun=None, demon: bool = True,
+                 duration: Optional[float] = -1, arguments: Iterable = (), kwarguments: Mapping[str, Any] = {}) -> None:
+        super().__init__(name=nameThread, target=fun, args=arguments, kwargs=kwarguments, daemon=demon)
         self.main: any = mainThread
         self.lock: Lock = Lock()
         self.condition: Condition = Condition(self.lock)
         self.nextRun: float = 0
         self.running: bool = True
         self.enter: float = time()
-        self.end: float = self.enter + duration if duration else self.enter + 99999999999999999999
-        self.name: str = name
-        self.daemon: bool = daemon  ## All is going to collapse when the main thread exit
-        self.function = target
-        self.args = args
-        self.kwargs = kwargs if kwargs else {}
+        self.end: float = self.enter + duration if duration else -1
 
     def updateNextRun(self, wait: float) -> None:
         nextRun: float = time() + wait
@@ -39,7 +35,3 @@ class GeneralThread(Thread):
         self.running = True
         with self.lock:
             self.condition.notify()
-
-    def run(self) -> None:
-        if self.function:
-            self.function(*self.args, **self.kwargs)
