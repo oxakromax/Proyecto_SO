@@ -264,7 +264,7 @@ class Uber(GeneralThread):
     def move(self, deltaX: int, deltaY: int) -> None:
         self.x += deltaX
         self.y += deltaY
-        # self.history.append((self.x, self.y))
+        self.history.append((self.x, self.y))
 
     def activity(self, c=0):
         if self.passenger:
