@@ -1,12 +1,12 @@
 import pandas as pd
 
 """Define the paths of data"""
-path_manana = "C:\\Users\\oxakr\\PycharmProjects\\Proyecto SO\\data\\manana.dat"
-path_noche = "C:\\Users\\oxakr\\PycharmProjects\\Proyecto SO\\data\\noche.dat"
-path_tarde = "C:\\Users\\oxakr\\PycharmProjects\\Proyecto SO\\data\\tarde.dat"
-path_request_1 = "C:\\Users\\oxakr\\PycharmProjects\\Proyecto SO\\data\\requests_1.dat"
-path_request_2 = "C:\\Users\\oxakr\\PycharmProjects\\Proyecto SO\\data\\requests_2.dat"
-path_request_3 = "C:\\Users\\oxakr\\PycharmProjects\\Proyecto SO\\data\\requests_3.dat"
+path_manana = '..\\data\\manana.dat'
+path_noche = '..\\data\\noche.dat'
+path_tarde = '..\\data\\tarde.dat'
+path_request_1 = '..\\data\\requests_1.dat'
+path_request_2 ='..\\data\\requests_2.dat'
+path_request_3 = '..\\data\\requests_3.dat'
 
 """Read data"""
 
