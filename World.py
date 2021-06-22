@@ -15,9 +15,10 @@ class Map(GeneralThread):
     def __init__(self):
         super().__init__(nameThread="MAP", demon=False)
         self.ubers: list = []
-        self.avalaibleUbers: list = []
+        self.avalaibleUbers: list = []  # Order Doesnt matter anymore ;-;
         self.historyUbers: list = []
         self.__clients: dict = dict()
+        self.watingClients: list = []
         self.historyclients: list = []
         self.uberLock: Lock = Lock()
         self.uberCondition: Condition = Condition(self.uberLock)
@@ -26,7 +27,14 @@ class Map(GeneralThread):
         self.maxY, self.maxX = 1000, 1000
         self.time, self.maxTime = 0, 14000
         self.ubersDone: int = 0
-        self.clientsDone: int = 0
+
+    def addWaitingClient(self, client):
+        if not client in self.watingClients:
+            self.watingClients.append(client)
+
+    def removeWaitingClient(self, client):
+        if client in self.watingClients:
+            self.watingClients.remove(client)
 
     def addUber(self, uber):
         self.ubers.append(uber)
@@ -56,17 +64,29 @@ class Map(GeneralThread):
         for uber in self.ubers:
             uber.start()
 
-    def runUbers(self):
+    def runUbersPRAM(self):  ## For parallel
         with self.uberLock:
             self.uberCondition.notifyAll()
 
+    def runUbers(self):  ## For without threading solution
+        for uber in self.ubers:
+            uber.activity()
+
     def runClients(self):
-        with self.clientLock:
-            self.clientCondition.notifyAll()
         if self.time in self.__clients.keys():
             for client in self.__clients[self.time]:
-                client.start()  ## Added to the process and lock
-            self.__clients.pop(self.time)
+                self.addWaitingClient(client)
+        while len(self.watingClients) > 0 and len(self.avalaibleUbers) > 0:
+            client = self.watingClients[0]
+            info(f'Original pick Client {client.id}')
+            client.pickUber()
+
+    def startWithoutPRAM(self):
+        while self.time <= self.maxTime:
+            self.runClients()
+            self.runUbers()
+            info(self.time)
+            self.time += 1
 
     def run(self) -> None:
         self.firstTimeRun()
@@ -75,10 +95,9 @@ class Map(GeneralThread):
         while self.time <= self.maxTime and self.running.isSet():  # To make a abruptly STOP
             self.flag.wait()  # If the thread is going to be paused, here is the flag.
             self.ubersDone = 0
-            self.clientsDone = 0
             self.runClients()
             # self.wait()
-            self.runUbers()
+            self.runUbersPRAM()
             self.wait()
             info(self.time)
             self.time += 1
@@ -100,6 +119,7 @@ class client(GeneralThread):
         self.picked: bool = False
         self.done: bool = False
         self.checked: bool = False
+        self.uber: Optional[Uber] = None
 
     def updatePicked(self, status: bool):
         self.picked = status
@@ -111,27 +131,37 @@ class client(GeneralThread):
         """0 NOT PICKED AND NOT DONE, 1 PICKED BUT NOT DONE, 2 DONE"""
         return 0 if not self.picked and not self.done else 1 if self.picked and not self.done else 2
 
-    def distancia(self, x, y):
+    def distancia(self, x, y) -> int:
         """Calcula la distancia entre las coordenada."""
-        delta_x = self.x - x
-        delta_y = self.y - y
-        return (delta_x ** 2 + delta_y ** 2) ** 0.5
+        delta_x = abs(self.x - x)
+        delta_y = abs(self.y - y)
+        return delta_x + delta_y
 
-    def pickUber(self) -> bool:
+    def pickUber(self, uberp=None) -> bool:
+        if self.uber:
+            return True
+        self.main.addWaitingClient(self)
         ubers = self.main.avalaibleUbers
         if len(ubers) > 0:
             uber = min(ubers, key=lambda x: self.distancia(*x.getCoord()))  # Select the ideal uber
-            if uber:
+            if uber == uberp:  # Is the HandShake from the selected uber?
                 if uber.setPassenger(self):
                     self.main.historyclients.append(self)
-                    info(f'I picked the uber {uber.name} and i have time: {self.time}')
+                    self.main.removeWaitingClient(self)
+                    self.uber = uber
+                    info(
+                        f'Client {self.id}: I picked the uber {uber.name} and i have time: {self.time}. Distance: {self.distancia(*uber.getCoord())}')
                     return True
+            else:
+                return uber.handShake(self)  # Do a handshake to be sure is the CLOSEST client to the selected uber
         return False
 
     def run(self) -> None:
-        if not self.pickUber():
-            with self.lock:
-                self.condition.wait_for(lambda: self.pickUber())
+        while not self.uber:
+            self.wait()
+            if self.uber:
+                break
+            self.pickUber()
 
 
 class Uber(GeneralThread):
@@ -219,6 +249,11 @@ class Uber(GeneralThread):
         self.clients.append(passenger)
         self.main.avalaibleUbers.remove(self)
         return True
+
+    def handShake(self, passenger: client) -> bool:
+        client = min(self.main.watingClients, key=lambda x: x.distancia(*self.getCoord()))
+        client.pickUber(self)
+        return passenger == client
 
     def move(self, deltaX: int, deltaY: int) -> None:
         self.x += deltaX
