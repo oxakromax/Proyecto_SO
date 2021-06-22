@@ -65,6 +65,8 @@ class Map(GeneralThread):
             uber.start()
 
     def runUbersPRAM(self):  ## For parallel
+        # for uber in self.ubers:
+        #     uber.release()
         with self.uberLock:
             self.uberCondition.notifyAll()
 
@@ -82,11 +84,14 @@ class Map(GeneralThread):
             client.pickUber()
 
     def startWithoutPRAM(self):
+        global SLEEP_INTERVAL
         while self.time <= self.maxTime:
             self.runClients()
             self.runUbers()
             info(self.time)
             self.time += 1
+            if SLEEP_INTERVAL > 0:
+                sleep(SLEEP_INTERVAL)
 
     def run(self) -> None:
         self.firstTimeRun()
@@ -96,12 +101,12 @@ class Map(GeneralThread):
             self.flag.wait()  # If the thread is going to be paused, here is the flag.
             self.ubersDone = 0
             self.runClients()
-            # self.wait()
             self.runUbersPRAM()
             self.wait()
             info(self.time)
             self.time += 1
-            sleep(SLEEP_INTERVAL)
+            if SLEEP_INTERVAL > 0:
+                sleep(SLEEP_INTERVAL)
 
 
 class client(GeneralThread):
@@ -171,6 +176,7 @@ class Uber(GeneralThread):
         self.main: Map = world
         self.x: int = x
         self.y: int = y
+        self.possibles: list = [(0, 1), (0, -1), (1, 0), (-1, 0)]
         self.movements: dict = {"S": (0, -1),
                                 "N": (0, 1),
                                 "E": (1, 0),
@@ -195,7 +201,7 @@ class Uber(GeneralThread):
                     return movement
             except:
                 pass  # Nothing
-        return choice([(0, 1), (0, -1), (1, 0), (-1, 0)])
+        return choice(self.possibles)
 
     def getCoord(self) -> tuple:
         """Return a tuple of X,Y Coordinates"""

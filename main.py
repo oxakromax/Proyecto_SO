@@ -21,12 +21,17 @@ def setup():
             client(x, world, randint(0, 1000), randint(0, 1000), randint(0, 1000), randint(0, 1000), randint(0, 12000)))
 
 
+def bench():
+    setup()
+    info(f"TOTAL TIME: {timeit('world.startWithoutPRAM()', number=1, globals=globals())}")
+    sleep(5)
+    setup()
+    info(
+        f"TOTAL TIME: {timeit('world.run()', number=1, globals=globals())}")  ## Es lo mismo como para que te hagas una idea.
+
+
 setup()
-info(f"TOTAL TIME: {timeit('world.startWithoutPRAM()', number=1, globals=globals())}")
-sleep(5)
-setup()
-info(
-    f"TOTAL TIME: {timeit('world.run()', number=1, globals=globals())}")  ## Es lo mismo como para que te hagas una idea.
+world.start()
 # Por favor matenme.
 
 # start = time()
