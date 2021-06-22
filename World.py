@@ -15,8 +15,9 @@ class Map(GeneralThread):
     def __init__(self):
         super().__init__(nameThread="MAP", demon=False)
         self.ubers: list = []
+        self.avalaibleUbers: list = []
         self.historyUbers: list = []
-        self.clients: list = []
+        self.__clients: dict = dict()
         self.historyclients: list = []
         self.uberLock: Lock = Lock()
         self.uberCondition: Condition = Condition(self.uberLock)
@@ -27,11 +28,33 @@ class Map(GeneralThread):
         self.ubersDone: int = 0
         self.clientsDone: int = 0
 
+    def addUber(self, uber):
+        self.ubers.append(uber)
+        self.avalaibleUbers.append(uber)
+
+    def removeUber(self, uber):
+        if uber.passenger:
+            uber.markedtoDelete = True
+        else:
+            if uber in self.ubers:
+                self.ubers.remove(uber)
+            if uber in self.avalaibleUbers:
+                self.avalaibleUbers.remove(uber)
+            self.historyUbers.append(uber)
+            uber.stop()  ## Kill Thread.
+
+    def addClient(self, client):
+        time = client.time
+        if time < self.time:
+            time = self.time + 1
+        if time in self.__clients.keys():
+            self.__clients[time].append(client)
+        else:
+            self.__clients[time] = [client]
+
     def firstTimeRun(self):
         for uber in self.ubers:
             uber.start()
-        for client in self.clients:
-            client.start()
 
     def runUbers(self):
         with self.uberLock:
@@ -40,6 +63,10 @@ class Map(GeneralThread):
     def runClients(self):
         with self.clientLock:
             self.clientCondition.notifyAll()
+        if self.time in self.__clients.keys():
+            for client in self.__clients[self.time]:
+                client.start()  ## Added to the process and lock
+            self.__clients.pop(self.time)
 
     def run(self) -> None:
         self.firstTimeRun()
@@ -91,43 +118,20 @@ class client(GeneralThread):
         return (delta_x ** 2 + delta_y ** 2) ** 0.5
 
     def pickUber(self) -> bool:
-        ubers = list(filter(lambda x: x.passenger is None, self.main.ubers))  # Filter avalaible ubers
+        ubers = self.main.avalaibleUbers
         if len(ubers) > 0:
             uber = min(ubers, key=lambda x: self.distancia(*x.getCoord()))  # Select the ideal uber
             if uber:
                 if uber.setPassenger(self):
-                    self.main.clients.remove(self)
                     self.main.historyclients.append(self)
                     info(f'I picked the uber {uber.name} and i have time: {self.time}')
                     return True
         return False
 
-    # async def trytoPick(self):
-    #     condition = asyncio.Condition()
-    #     async with condition:
-    #         await condition.wait_for(lambda: self.time <= self.main.time)
-    #         self.pickUber()
-    #         # await condition.wait_for(lambda: self.pickUber())
-
     def run(self) -> None:
-        with self.lock:
-            self.condition.wait_for(lambda: self.time <= self.main.time)
         if not self.pickUber():
             with self.lock:
                 self.condition.wait_for(lambda: self.pickUber())
-
-    # def run(self) -> None:
-    #     while self.running.isSet() and self.main.time < self.main.maxTime:
-    #         self.wait()
-    #         self.flag.wait()
-    #         if self.time <= self.main.time:
-    #             if self.pickUber():
-    #                 if len(self.main.clients) == self.main.clientsDone:
-    #                     self.main.release()  # If something happens, it checks anyway
-    #                 return  # Colapses the thread because it never going to be used again
-    #         self.main.clientsDone += 1
-    #         if len(self.main.clients) == self.main.clientsDone:
-    #             self.main.release()
 
 
 class Uber(GeneralThread):
@@ -204,19 +208,22 @@ class Uber(GeneralThread):
             self.currentIndex = 0
             self.passenger = None  ## DONE
             if self.markedtoDelete:
-                self.main.ubers.remove(self)  # Done
+                self.main.removeUber(self)
+            else:
+                self.main.avalaibleUbers.append(self)
 
     def setPassenger(self, passenger: client) -> bool:
         if self.passenger:  # Not null passenger.
             return False
         self.passenger = passenger
         self.clients.append(passenger)
+        self.main.avalaibleUbers.remove(self)
         return True
 
     def move(self, deltaX: int, deltaY: int) -> None:
         self.x += deltaX
         self.y += deltaY
-        self.history.append((self.x, self.y))
+        # self.history.append((self.x, self.y))
 
     def activity(self, c=0):
         if self.passenger:

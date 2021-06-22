@@ -7,9 +7,9 @@ basicConfig(level=DEBUG, format='%(asctime)s - %(threadName)s - %(message)s',
             datefmt='%d-%b-%y %H:%M:%S')
 world = Map()
 for x in range(100):  # Agrega 100 ubers
-    world.ubers.append(Uber(x, world, randint(0, 1000), randint(0, 1000)))
-for x in range(2000):  ## Agrega 2000 clientes
-    world.clients.append(
+    world.addUber(Uber(x, world, randint(0, 1000), randint(0, 1000)))
+for x in range(500):  ## Agrega 2000 clientes
+    world.addClient(
         client(x, world, randint(0, 1000), randint(0, 1000), randint(0, 1000), randint(0, 1000), randint(0, 12000)))
 world.start()
 # sleep(1)
